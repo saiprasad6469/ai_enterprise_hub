@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { User, IUser } from '../models/User';
 import { AppError } from '../utils/AppError';
+import mongoose from "mongoose";
 
 // Extend Express Request to include user
 declare global {
