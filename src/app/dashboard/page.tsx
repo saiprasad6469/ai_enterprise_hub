@@ -1,15 +1,30 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   FileText, Users, MessageSquare, HardDrive, Cpu, 
-  GitBranch, Bot, Activity, PlusCircle, ArrowRight, Zap 
+  GitBranch, Bot, Activity, PlusCircle, ArrowRight, Zap, ShieldCheck, UserCheck 
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useDataStore } from '@/store/useDataStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function DashboardHome() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+
+  React.useEffect(() => {
+    if (user?.role === 'SuperAdmin' || user?.role === 'SUPER_ADMIN') {
+      router.replace('/dashboard/super-admin');
+    } else if (user?.role === 'Admin' || user?.role === 'ADMIN') {
+      router.replace('/dashboard/admin');
+    } else if (user?.role === 'Employee' || user?.role === 'EMPLOYEE') {
+      router.replace('/dashboard/employee');
+    }
+  }, [user, router]);
+
   const documents = useDataStore((state) => state.documents);
   const users = useDataStore((state) => state.users);
   const agents = useDataStore((state) => state.agents);

@@ -7,6 +7,7 @@ import {
   AlertCircle, RefreshCw 
 } from 'lucide-react';
 import { useDataStore } from '@/store/useDataStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -17,15 +18,27 @@ import { Document } from '@/types';
 export default function DocumentsPage() {
   const documents = useDataStore((state) => state.documents);
   const deleteDocument = useDataStore((state) => state.deleteDocument);
+  const user = useAuthStore((state) => state.user);
   const { toast } = useToastStore();
 
+  const isSuperAdmin = user?.role === 'SuperAdmin' || user?.role === 'SUPER_ADMIN';
+  const canManageDocs = isSuperAdmin || user?.role === 'Admin' || user?.role === 'ADMIN';
+
   const [searchVal, setSearchVal] = React.useState('');
-  const [deptFilter, setDeptFilter] = React.useState('All');
+  const [deptFilter, setDeptFilter] = React.useState(isSuperAdmin ? 'All' : (user?.department || 'All'));
   const [selectedDoc, setSelectedDoc] = React.useState<Document | null>(null);
   const [sortField, setSortField] = React.useState<'name' | 'size' | 'uploadedAt'>('name');
   const [sortAsc, setSortAsc] = React.useState(true);
 
   const handleDelete = (id: string, name: string) => {
+    if (!canManageDocs) {
+      toast({
+        title: 'Access Forbidden',
+        description: 'Employees cannot delete department documents.',
+        type: 'error',
+      });
+      return;
+    }
     deleteDocument(id);
     if (selectedDoc?.id === id) setSelectedDoc(null);
     toast({
@@ -33,6 +46,45 @@ export default function DocumentsPage() {
       description: `Removed "${name}" from your workspace index.`,
       type: 'warning',
     });
+  };
+
+  const handleDownload = async (doc: Document) => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const accessToken = useAuthStore.getState().accessToken;
+    try {
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: {
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+        }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        toast({
+          title: 'Download Started',
+          description: `Downloading "${doc.name}" from ${doc.department || 'your'} department repository.`,
+          type: 'success',
+        });
+      } else {
+        toast({
+          title: 'Download Denied',
+          description: 'Access denied: Cannot download another department\'s document.',
+          type: 'error',
+        });
+      }
+    } catch {
+      toast({
+        title: 'Download Error',
+        description: 'Failed to download file from server.',
+        type: 'error',
+      });
+    }
   };
 
   const handleSort = (field: 'name' | 'size' | 'uploadedAt') => {
@@ -96,15 +148,25 @@ export default function DocumentsPage() {
         <select
           value={deptFilter}
           onChange={(e) => setDeptFilter(e.target.value)}
-          className="text-xs bg-background border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-primary font-semibold text-foreground"
+          disabled={!isSuperAdmin}
+          className={cn(
+            "text-xs bg-background border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-primary font-semibold text-foreground",
+            !isSuperAdmin && "opacity-80 cursor-not-allowed bg-muted/40"
+          )}
         >
-          <option value="All">All Departments</option>
-          <option value="Engineering">Engineering</option>
-          <option value="Legal">Legal</option>
-          <option value="HR">HR</option>
-          <option value="Marketing">Marketing</option>
-          <option value="Operations">Operations</option>
-          <option value="Finance">Finance</option>
+          {isSuperAdmin ? (
+            <>
+              <option value="All">All Departments</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Legal">Legal</option>
+              <option value="HR">HR</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Operations">Operations</option>
+              <option value="Finance">Finance</option>
+            </>
+          ) : (
+            <option value={user?.department || 'Engineering'}>{user?.department || 'General'} Workspace</option>
+          )}
         </select>
       </div>
 
@@ -180,12 +242,21 @@ export default function DocumentsPage() {
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(doc.id, doc.name)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                        title="Delete file"
+                        onClick={() => handleDownload(doc)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
+                        title="Download file"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Download className="h-4 w-4" />
                       </button>
+                      {canManageDocs && (
+                        <button
+                          onClick={() => handleDelete(doc.id, doc.name)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                          title="Delete file"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -242,23 +313,19 @@ export default function DocumentsPage() {
               {/* Actions */}
               <div className="pt-4 flex flex-col gap-2">
                 <button
-                  onClick={() => {
-                    toast({
-                      title: 'Download Triggered',
-                      description: `Downloading resource "${selectedDoc.name}"`,
-                      type: 'success',
-                    });
-                  }}
+                  onClick={() => handleDownload(selectedDoc)}
                   className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/95 transition-colors"
                 >
                   <Download className="h-4 w-4" /> Download Original File
                 </button>
-                <button
-                  onClick={() => handleDelete(selectedDoc.id, selectedDoc.name)}
-                  className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete Vector Index
-                </button>
+                {canManageDocs && (
+                  <button
+                    onClick={() => handleDelete(selectedDoc.id, selectedDoc.name)}
+                    className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Vector Index
+                  </button>
+                )}
               </div>
             </div>
           </div>

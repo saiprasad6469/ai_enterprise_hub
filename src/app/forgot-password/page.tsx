@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative select-none">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_50%_20%,_#e6f7f5_0%,_#f2faf8_50%,_#ffffff_100%)] dark:bg-[radial-gradient(circle_at_50%_20%,_#091d1a_0%,_#0c1514_50%,_#090d0e_100%)] py-12 px-4 sm:px-6 lg:px-8 relative select-none">
       
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:3rem_3rem] dark:bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] opacity-30 pointer-events-none" />
@@ -44,25 +44,25 @@ export default function ForgotPasswordPage() {
         
         {/* App Logo */}
         <div className="flex flex-col items-center text-center">
-          <Link href="/" className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <BrainCircuit className="h-6 w-6" />
+          <Link href="/" className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-700 text-white shadow-xl shadow-teal-600/20 hover:scale-105 transition-transform">
+            <BrainCircuit className="h-7 w-7" />
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground mt-4">Reset Workspace Password</h2>
-          <p className="text-sm text-muted-foreground mt-1">Regain access to your secure hub environment</p>
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0d2826] dark:text-slate-100 mt-4">Reset Workspace Password</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Regain access to your AI Enterprise Hub environment</p>
         </div>
 
-        <Card className="border border-border/80 shadow-xl backdrop-blur-sm bg-card/85">
+        <Card className="border border-teal-200/80 dark:border-teal-900/60 shadow-2xl backdrop-blur-md bg-white/90 dark:bg-slate-900/90 rounded-3xl">
           {!success ? (
             <form onSubmit={handleSubmit(onSubmit)}>
               <CardHeader className="space-y-1 pb-4">
-                <CardTitle className="text-lg font-bold">Request Reset Link</CardTitle>
-                <CardDescription>Enter your email and we will send instructions.</CardDescription>
+                <CardTitle className="text-lg font-extrabold text-[#0d2826] dark:text-slate-100">Request Reset Link</CardTitle>
+                <CardDescription className="text-xs">Enter your email and we will send instructions.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Email Field */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5" /> Workspace Email
+                    <Mail className="h-3.5 w-3.5 text-teal-600" /> Workspace Email
                   </label>
                   <Input 
                     type="email" 
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full inline-flex h-10 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/95 shadow-md shadow-primary/10 transition-all duration-200 disabled:opacity-50"
+                  className="w-full inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-800 hover:to-emerald-900 text-xs font-bold text-white shadow-lg shadow-teal-800/20 transition-all duration-200 disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
                 </button>
                 
                 <div className="text-xs text-center text-muted-foreground mt-1">
-                  <Link href="/login" className="font-semibold text-primary hover:text-primary/95 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href="/login" className="font-bold text-teal-600 hover:text-teal-700 inline-flex items-center gap-1.5 transition-colors">
                     <ArrowLeft className="h-3.5 w-3.5" /> Back to Sign In
                   </Link>
                 </div>
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
               <div className="pt-4">
                 <Link
                   href="/login"
-                  className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/95 shadow-md transition-colors"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-teal-700 hover:bg-teal-800 text-xs font-bold text-white shadow-md transition-colors"
                 >
                   Back to Log In
                 </Link>

@@ -228,13 +228,6 @@ export function Navbar() {
                     <User className="h-4 w-4" /> Personal Profile
                   </Link>
                   <Link
-                    href="/dashboard/billing"
-                    onClick={() => setShowProfileMenu(false)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <CreditCard className="h-4 w-4" /> Subscriptions & Billing
-                  </Link>
-                  <Link
                     href="/dashboard/settings"
                     onClick={() => setShowProfileMenu(false)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"

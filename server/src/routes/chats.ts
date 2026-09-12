@@ -4,8 +4,12 @@ import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 import { ChatSession } from '../models/ChatSession';
 import { Agent } from '../models/Agent';
-import { DocumentModel } from '../models/Document';
+import { Document as DocumentModel } from '../models/Document';
+import { ragService } from '../services/ragService';
 import { AppError } from '../utils/AppError';
+import { auditService } from '../services/auditService';
+
+import mongoose from 'mongoose';
 
 const router = Router();
 router.use(authenticate);
@@ -14,7 +18,11 @@ router.use(authenticate);
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const chats = await ChatSession.find({ userId: req.user!._id })
+    const validUserId = mongoose.Types.ObjectId.isValid(req.user!._id?.toString())
+      ? req.user!._id
+      : new mongoose.Types.ObjectId('65a000000000000000000000');
+
+    const chats = await ChatSession.find({ user: validUserId })
       .sort({ updatedAt: -1 })
       .select('-messages');
 
@@ -25,23 +33,27 @@ router.get(
 // POST /api/chats — create new chat session
 router.post(
   '/',
-  authorize('Admin', 'Member'),
+  authorize('Admin', 'Employee', 'Member'),
   asyncHandler(async (req: Request, res: Response) => {
     const { agentId, title } = req.body;
+    const validUserId = mongoose.Types.ObjectId.isValid(req.user!._id?.toString())
+      ? req.user!._id
+      : new mongoose.Types.ObjectId('65a000000000000000000000');
 
     let chatTitle = title || 'New AI Consultation';
-    if (agentId) {
+    if (agentId && mongoose.Types.ObjectId.isValid(agentId)) {
       const agent = await Agent.findById(agentId);
       if (agent) chatTitle = `Chat with ${agent.name}`;
     }
 
     const chat = await ChatSession.create({
       title: chatTitle,
-      userId: req.user!._id,
-      agentId,
+      user: validUserId,
+      agent: (agentId && mongoose.Types.ObjectId.isValid(agentId)) ? agentId : null,
       messages: [],
-      organization: req.user!.organization,
     });
+
+    await auditService.log(req, 'CHAT_CREATE', chatTitle);
 
     res.status(201).json({ success: true, data: chat });
   })
@@ -51,29 +63,44 @@ router.post(
 router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const chat = await ChatSession.findOne({
-      _id: req.params.id,
-      userId: req.user!._id,
-    });
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
+    let chat = null;
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      chat = await ChatSession.findOne({
+        _id: rawId,
+        user: req.user!._id,
+      });
+    }
     if (!chat) throw new AppError('Chat not found.', 404);
 
     res.json({ success: true, data: chat });
   })
 );
 
-// POST /api/chats/:id/messages — send message & get AI response
+// POST /api/chats/:id/messages — send message & generate RAG response with vector citations
 router.post(
   '/:id/messages',
-  authorize('Admin', 'Member'),
+  authorize('Admin', 'Employee', 'Member'),
   asyncHandler(async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) throw new AppError('Message content is required.', 400);
 
-    const chat = await ChatSession.findOne({
-      _id: req.params.id,
-      userId: req.user!._id,
-    });
-    if (!chat) throw new AppError('Chat not found.', 404);
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
+    let chat = null;
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      chat = await ChatSession.findOne({
+        _id: rawId,
+        user: req.user!._id,
+      });
+    }
+
+    if (!chat) {
+      chat = await ChatSession.create({
+        title: 'New AI Consultation',
+        user: req.user!._id,
+        messages: [],
+      });
+    }
 
     // Add user message
     chat.messages.push({
@@ -82,38 +109,102 @@ router.post(
       timestamp: new Date(),
     });
 
-    // Generate AI response (mock — extensible for OpenAI/Gemini/Claude)
-    const agent = chat.agentId ? await Agent.findById(chat.agentId) : null;
-    const agentName = agent?.name || 'Enterprise Assistant';
-    const agentDept = agent?.department || 'Enterprise Ops';
+    // Department-isolated RAG vector search & retrieval
+    const userRole = (req.user!.role || '').toUpperCase();
+    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
+    const ragResult = await ragService.retrieveDepartmentContext(
+      content,
+      req.user!.department,
+      isSuperAdmin,
+      8,
+      12000
+    );
 
-    let aiResponse = `As ${agentName} specializing in ${agentDept}, I have analyzed your query.\n\n`;
-    aiResponse += `**Analysis Summary:**\n\n`;
-    aiResponse += `1. **Context Match**: Found relevant references across your documents.\n`;
-    aiResponse += `2. **Verification**: Parameter lookups executed.\n\n`;
-    aiResponse += `\`\`\`javascript\nconst config = {\n  model: "${agent?.model || 'GPT-4o'}",\n  temperature: 0.2,\n};\n\`\`\`\n\n`;
-    aiResponse += `Is there anything specific you would like me to elaborate on?`;
+    const agent = chat.agent ? await Agent.findById(chat.agent) : null;
+    const agentName = agent?.name || 'Enterprise AI Assistant';
+    const agentDept = agent?.department || req.user!.department;
 
-    // Build mock citations from existing documents
-    const docs = await DocumentModel.find().limit(2);
-    const citations = docs.map((d, i) => ({
-      docName: d.name,
-      page: i + 1,
-      textSnippet: `Relevant reference from ${d.name} regarding your query.`,
-    }));
+    let aiResponse: string | null = null;
+    let isNotFound = ragResult.status === 'NOT_FOUND';
+
+    if (!isNotFound) {
+      aiResponse = await ragService.generateGroqLLMResponse(
+        content,
+        ragResult.contextText,
+        agentName,
+        req.user!.department,
+        req.user!.role
+      );
+
+      // Fallback to local grounded RAG synthesizer if Groq API key is not configured or offline
+      if (!aiResponse || aiResponse.trim() === 'NOT_FOUND' || aiResponse.includes('Information on this topic is not available')) {
+        aiResponse = ragService.generateLocalRAGResponse(
+          content,
+          ragResult.contextText,
+          ragResult.sources,
+          agentName,
+          req.user!.department
+        );
+      }
+    }
+
+    if (isNotFound || !aiResponse) {
+      aiResponse = `The requested information was not found in the authorized **${req.user!.department}** department documents.`;
+    }
 
     chat.messages.push({
       sender: 'assistant',
       content: aiResponse,
       timestamp: new Date(),
-      citations,
     });
 
     await chat.save();
+    await auditService.log(req, 'CHAT_QUERY', `Query to ${agentName} (${req.user!.department})`);
 
-    // Return the last two messages (user + assistant)
-    const lastMessages = chat.messages.slice(-2);
-    res.json({ success: true, data: { messages: lastMessages } });
+    const parseCategoriesFromContext = (contextText: string) => {
+      const categories: Array<{ name: string; items: string[] }> = [];
+      const catRegex = /(?:###|\*\*|^)\s*(Languages|Systems & Backend|Data & ML|Frontend|Technical Skills|Projects|Education|Achievements|Certifications|Key Provisions|Rules|Liabilities|Financials)[:\*]*\s*([^\n]+(?:\n[^\n#]+)*)/gi;
+      let m;
+      while ((m = catRegex.exec(contextText)) !== null) {
+        const catName = m[1].trim();
+        const rawItems = m[2]
+          .replace(/[*#]/g, '')
+          .split(/[,;\n]/)
+          .map((i) => i.trim())
+          .filter((i) => i.length > 1 && !i.toLowerCase().includes('extracted') && !i.toLowerCase().includes('copilot') && !i.toLowerCase().includes('grounded'));
+
+        if (rawItems.length > 0) {
+          categories.push({
+            name: catName,
+            items: Array.from(new Set(rawItems)).slice(0, 10),
+          });
+        }
+      }
+      return categories;
+    };
+
+    const structuredCategories = !isNotFound ? parseCategoriesFromContext(ragResult.contextText) : [];
+
+    // Return the closed-domain consistent RAG envelope
+    res.json({
+      success: true,
+      status: isNotFound ? 'NOT_FOUND' : 'ANSWERED',
+      answer: {
+        summary: isNotFound 
+          ? 'The requested information was not found in the authorized enterprise documents.'
+          : aiResponse,
+        ...(structuredCategories.length > 0 ? { categories: structuredCategories } : {}),
+      },
+      data: {
+        messages: chat.messages.slice(-2),
+        sources: isNotFound ? [] : ragResult.sources,
+      },
+      sources: isNotFound ? [] : ragResult.sources,
+      retrieval: {
+        candidateCount: ragResult.retrievalStats?.candidateCount || 0,
+        relevantChunkCount: isNotFound ? 0 : ragResult.retrievalStats?.relevantChunkCount || 0,
+      },
+    });
   })
 );
 
@@ -121,9 +212,14 @@ router.post(
 router.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
+    if (!rawId || rawId === 'undefined' || !mongoose.Types.ObjectId.isValid(rawId)) {
+      return res.json({ success: true, message: 'Invalid or temp chat skipped.' });
+    }
+
     const chat = await ChatSession.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user!._id,
+      _id: rawId,
+      user: req.user!._id,
     });
     if (!chat) throw new AppError('Chat not found.', 404);
 

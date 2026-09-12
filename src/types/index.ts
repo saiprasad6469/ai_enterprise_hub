@@ -1,12 +1,41 @@
 export interface User {
   id: string;
+  employeeId?: string;
   name: string;
   email: string;
   avatar?: string;
-  role: 'Admin' | 'Employee';
-  department: 'Engineering' | 'Legal' | 'HR' | 'Marketing' | 'Operations' | 'Finance';
+  role: 'SuperAdmin' | 'Admin' | 'Employee' | 'Member' | 'Viewer' | 'SUPER_ADMIN' | 'ADMIN' | 'EMPLOYEE';
+  department: 'Engineering' | 'Legal' | 'HR' | 'Marketing' | 'Operations' | 'Finance' | 'IT' | 'Sales' | string;
+  designation?: string;
+  password?: string;
   status: 'Active' | 'Inactive' | 'Invited';
   joinedAt: string;
+}
+
+export interface CompanyTask {
+  id: string;
+  title: string;
+  description: string;
+  assignedTo: string; // Employee Name
+  assignedEmployeeId?: string;
+  department: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Deferred';
+  deadline: string;
+  progress: number; // 0 - 100
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  head: string;
+  employeeCount: number;
+  documentCount: number;
+  description: string;
+  status: 'Active' | 'Archived';
 }
 
 export interface Document {
@@ -16,9 +45,14 @@ export interface Document {
   size: string;
   uploadedBy: string;
   uploadedAt: string;
-  status: 'Processed' | 'Processing' | 'Failed';
+  status: 'Uploading' | 'Processing' | 'Indexing' | 'Indexed' | 'Processed' | 'Failed';
   progress?: number;
   department?: string;
+  category?: string;
+  description?: string;
+  accessLevel?: 'Public' | 'Department' | 'Confidential' | 'AdminOnly';
+  fileType?: string;
+  chunksCount?: number;
 }
 
 export interface AIAgent {
@@ -54,6 +88,7 @@ export interface Citation {
   id: string;
   docName: string;
   page?: number;
+  relevance?: number;
   textSnippet: string;
 }
 
@@ -72,6 +107,8 @@ export interface ChatSession {
   agentId?: string;
   updatedAt: string;
   messages: Message[];
+  messagesCount?: number;
+  lastUpdated?: string;
 }
 
 export interface ApiKey {
@@ -89,6 +126,9 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   user: string;
+  userName?: string;
+  userRole?: string;
+  department?: string;
   action: string;
   target: string;
   ipAddress: string;
@@ -99,7 +139,7 @@ export interface Notification {
   id: string;
   title: string;
   description: string;
-  category: 'System' | 'Security' | 'Billing' | 'Workflow';
+  category: 'System' | 'Security' | 'Billing' | 'Workflow' | 'Announcement';
   read: boolean;
   time: string;
 }

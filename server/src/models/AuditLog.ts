@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document as MongoDoc } from 'mongoose';
 
 export interface IAuditLog extends MongoDoc {
-  user: mongoose.Types.ObjectId;
+  user?: mongoose.Types.ObjectId;
   action: string;
   target: string;
   ipAddress: string;
@@ -11,7 +11,7 @@ export interface IAuditLog extends MongoDoc {
 
 const auditLogSchema = new Schema<IAuditLog>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     action: { type: String, required: true },
     target: { type: String, required: true },
     ipAddress: { type: String, default: 'unknown' },

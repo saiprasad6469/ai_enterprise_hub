@@ -10,13 +10,11 @@ export const auditService = {
   ) {
     try {
       await AuditLog.create({
-        userId: req.user?._id,
-        userEmail: req.user?.email || 'system',
+        user: req.user?._id,
         action,
         target,
         ipAddress: req.ip || req.socket.remoteAddress || '0.0.0.0',
         status,
-        organization: req.user?.organization,
       });
     } catch (err) {
       // Audit logging should never crash the main flow

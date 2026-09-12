@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document as MongoDoc } from 'mongoose';
 
-export interface IAgent extends MongoDoc {
+export interface IAgent {
+  _id: mongoose.Types.ObjectId;
   name: string;
   description: string;
   department: string;

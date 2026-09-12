@@ -6,81 +6,152 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, MessageSquare, Database, FileText, Bot, GitBranch, 
-  BarChart3, Users, Building2, Bell, Key, ShieldCheck, CreditCard, 
-  Settings, User, HelpCircle, ChevronLeft, ChevronRight, X, BrainCircuit
+  BarChart3, Users, Building2, Bell, Key, ShieldCheck, 
+  Settings, User, HelpCircle, ChevronLeft, ChevronRight, X, BrainCircuit,
+  ShieldAlert, CheckSquare, FolderGit2
 } from 'lucide-react';
 import { useUiStore } from '@/store/useUiStore';
 import { useDataStore } from '@/store/useDataStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badgeCountKey?: 'notifications' | 'documents';
-}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarExpanded, toggleSidebar, mobileSidebarOpen, setMobileSidebar } = useUiStore();
+  const { user } = useAuthStore();
   const notifications = useDataStore((state) => state.notifications);
   const documents = useDataStore((state) => state.documents);
+  const companyTasks = useDataStore((state) => state.companyTasks);
 
   const unreadNotificationCount = React.useMemo(
     () => notifications.filter(n => !n.read).length,
     [notifications]
   );
 
+  const isSuperAdmin = user?.role === 'SuperAdmin' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'Admin' || user?.role === 'ADMIN';
+
   const getBadgeCount = (key?: string) => {
     if (key === 'notifications') return unreadNotificationCount;
     if (key === 'documents') return documents.length;
+    if (key === 'tasks') return companyTasks.filter(t => t.status === 'Pending').length;
     return 0;
   };
 
-  const menuSections = [
+  // Super Admin Menu (Platform Level Governance)
+  const superAdminMenuSections = [
     {
-      title: 'Workspace',
+      title: 'Platform Governance',
       items: [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'AI Chat', href: '/dashboard/chat', icon: MessageSquare },
+        { name: 'Super Admin Overview', href: '/dashboard/super-admin', icon: ShieldAlert },
+        { name: 'Manage Administrators', href: '/dashboard/super-admin/admins', icon: Users },
+        { name: 'Global Audit Logs', href: '/dashboard/audit-logs', icon: ShieldCheck },
+        { name: 'System Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+      ]
+    },
+    {
+      title: 'Enterprise Core',
+      items: [
         { name: 'Knowledge Base', href: '/dashboard/knowledge-base', icon: Database },
-        { name: 'Documents', href: '/dashboard/documents', icon: FileText, badgeCountKey: 'documents' },
-        { name: 'AI Agents', href: '/dashboard/agents', icon: Bot },
-        { name: 'Workflows', href: '/dashboard/workflows', icon: GitBranch },
-        { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-      ]
-    },
-    {
-      title: 'Management',
-      items: [
-        { name: 'Users', href: '/dashboard/users', icon: Users },
+        { name: 'RAG Documents', href: '/dashboard/documents', icon: FileText, badgeCountKey: 'documents' },
+        { name: 'AI Model Agents', href: '/dashboard/agents', icon: Bot },
+        { name: 'Automated Pipelines', href: '/dashboard/workflows', icon: GitBranch },
+        { name: 'API Keys Vault', href: '/dashboard/api-keys', icon: Key },
         { name: 'Organizations', href: '/dashboard/organizations', icon: Building2 },
-        { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
-        { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: ShieldCheck },
-        { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
       ]
     },
     {
-      title: 'Account',
+      title: 'System Settings',
       items: [
-        { name: 'Profile', href: '/dashboard/profile', icon: User },
+        { name: 'Department Governance', href: '/dashboard/admin/departments', icon: FolderGit2 },
+        { name: 'System Settings', href: '/dashboard/settings', icon: Settings },
         { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, badgeCountKey: 'notifications' },
-        { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-        { name: 'Help Center', href: '/dashboard/help', icon: HelpCircle },
       ]
     }
   ];
 
+  // Dedicated Admin Menu (Operations, Employee Management, RAG Document uploads, Company Tasks)
+  const adminMenuSections = [
+    {
+      title: 'Operations Center',
+      items: [
+        { name: 'Admin Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
+        { name: 'Employee Management', href: '/dashboard/admin/employees', icon: Users },
+        { name: 'Add / Manage Documents', href: '/dashboard/admin/documents', icon: FileText, badgeCountKey: 'documents' },
+        { name: 'Company Tasks', href: '/dashboard/admin/tasks', icon: CheckSquare, badgeCountKey: 'tasks' },
+        { name: 'Department Audit Logs', href: '/dashboard/audit-logs', icon: ShieldCheck },
+      ]
+    },
+    {
+      title: 'Enterprise Tools',
+      items: [
+        { name: 'Knowledge Base', href: '/dashboard/knowledge-base', icon: Database },
+        { name: 'Department AI Agents', href: '/dashboard/agents', icon: Bot },
+        { name: 'Pipelines & Workflows', href: '/dashboard/workflows', icon: GitBranch },
+      ]
+    },
+    {
+      title: 'Account & Settings',
+      items: [
+        { name: 'Admin Profile', href: '/dashboard/profile', icon: User },
+        { name: 'Announcements', href: '/dashboard/notifications', icon: Bell, badgeCountKey: 'notifications' },
+        { name: 'Workspace Settings', href: '/dashboard/settings', icon: Settings },
+      ]
+    }
+  ];
+
+  // Employee Menu (Querying RAG, Department Workflows, Personal Space)
+  const employeeMenuSections = [
+    {
+      title: 'Employee Portal',
+      items: [
+        { name: 'Employee Overview', href: '/dashboard/employee', icon: LayoutDashboard },
+        { name: 'Company Tasks', href: '/dashboard/tasks', icon: CheckSquare, badgeCountKey: 'tasks' },
+        { name: 'AI Chat (RAG)', href: '/dashboard/chat', icon: MessageSquare },
+        { name: 'My Knowledge Base', href: '/dashboard/knowledge-base', icon: Database },
+        { name: 'My Documents', href: '/dashboard/documents', icon: FileText, badgeCountKey: 'documents' },
+        { name: 'My Activity Logs', href: '/dashboard/audit-logs', icon: ShieldCheck },
+      ]
+    },
+    {
+      title: 'Department Tools',
+      items: [
+        { name: 'Department Agents', href: '/dashboard/agents', icon: Bot },
+        { name: 'Automated Pipelines', href: '/dashboard/workflows', icon: GitBranch },
+      ]
+    },
+    {
+      title: 'My Account',
+      items: [
+        { name: 'Profile & Activity', href: '/dashboard/profile', icon: User },
+        { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, badgeCountKey: 'notifications' },
+        { name: 'Help & Docs', href: '/dashboard/help', icon: HelpCircle },
+      ]
+    }
+  ];
+
+  const menuSections = isSuperAdmin 
+    ? superAdminMenuSections 
+    : (isAdmin ? adminMenuSections : employeeMenuSections);
+
+  const homeHref = isSuperAdmin 
+    ? "/dashboard/super-admin" 
+    : (isAdmin ? "/dashboard/admin" : "/dashboard/employee");
+
+  const roleLabel = isSuperAdmin 
+    ? "Super Admin Console" 
+    : (isAdmin ? "Admin Console" : "Employee Workspace");
+
   const sidebarContent = (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border select-none">
-      {/* Header / Brand Logo */}
+      {/* Brand Header */}
       <div className={cn(
         "flex items-center justify-between h-16 border-b border-sidebar-border px-4",
         !sidebarExpanded && "justify-center px-0"
       )}>
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 dark:shadow-primary/10">
-            <BrainCircuit className="h-5 w-5 animate-pulse" />
+        <Link href={homeHref} className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-emerald-700 text-white shadow-lg shadow-teal-600/20">
+            <BrainCircuit className="h-5 w-5" />
           </div>
           {sidebarExpanded && (
             <motion.div
@@ -89,8 +160,12 @@ export function Sidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="flex flex-col"
             >
-              <span className="font-bold text-sm leading-tight text-foreground">Enterprise Hub</span>
-              <span className="text-[10px] text-muted-foreground font-medium">v1.2.0</span>
+              <span className="font-extrabold text-sm leading-tight text-foreground">AI Enterprise Hub</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                isSuperAdmin ? 'text-teal-500 dark:text-teal-400' : (isAdmin ? 'text-teal-600 dark:text-teal-400' : 'text-emerald-600 dark:text-emerald-400')
+              }`}>
+                {roleLabel}
+              </span>
             </motion.div>
           )}
         </Link>
@@ -109,7 +184,7 @@ export function Sidebar() {
         {menuSections.map((section) => (
           <div key={section.title} className="space-y-1">
             {sidebarExpanded && (
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 mb-2 select-none">
+              <h4 className="text-[10px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 mb-2">
                 {section.title}
               </h4>
             )}
@@ -123,28 +198,25 @@ export function Sidebar() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group duration-200",
+                    "flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group duration-200",
                     isActive 
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/15 dark:shadow-primary/5 font-semibold" 
+                      ? "bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md shadow-teal-700/20 font-bold" 
                       : "text-sidebar-foreground/80 hover:text-foreground hover:bg-sidebar-accent"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={cn("h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-105", isActive ? "" : "text-muted-foreground group-hover:text-foreground")} />
+                    <Icon className={cn("h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-105", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")} />
                     {sidebarExpanded && (
                       <span className="truncate">{item.name}</span>
                     )}
                   </div>
                   {sidebarExpanded && badgeCount > 0 && (
                     <span className={cn(
-                      "flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-5",
-                      isActive ? "bg-primary-foreground text-primary" : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground"
+                      "flex items-center justify-center text-[10px] px-2 py-0.5 rounded-full font-bold min-w-5",
+                      isActive ? "bg-white text-teal-800" : "bg-teal-500/15 text-teal-700 dark:text-teal-300"
                     )}>
                       {badgeCount}
                     </span>
-                  )}
-                  {!sidebarExpanded && badgeCount > 0 && (
-                    <div className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-background" />
                   )}
                 </Link>
               );
@@ -153,12 +225,26 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* Footer / Toggle Expanded Button */}
+      {/* User Info Bar at Bottom */}
+      {sidebarExpanded && user && (
+        <div className="p-3 border-t border-sidebar-border bg-slate-50/50 dark:bg-slate-900/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center font-bold text-xs">
+              {user.name?.charAt(0) || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold truncate text-foreground">{user.name}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.role} • {user.email}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!sidebarExpanded && (
-        <div className="hidden lg:flex items-center justify-center h-16 border-t border-sidebar-border">
+        <div className="hidden lg:flex items-center justify-center h-14 border-t border-sidebar-border">
           <button 
             onClick={toggleSidebar} 
-            className="flex items-center justify-center rounded-lg h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+            className="flex items-center justify-center rounded-lg h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -169,7 +255,6 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Desktop Sidebar Layout */}
       <aside className={cn(
         "hidden md:block h-screen sticky top-0 transition-all duration-300 z-30",
         sidebarExpanded ? "w-64" : "w-16"
@@ -177,19 +262,16 @@ export function Sidebar() {
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer (Drawer Layout) */}
       <AnimatePresence>
         {mobileSidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileSidebar(false)}
-              className="md:hidden fixed inset-0 bg-black z-40"
+              className="md:hidden fixed inset-0 bg-black/60 z-40"
             />
-            {/* Sidebar content */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -198,7 +280,6 @@ export function Sidebar() {
               className="md:hidden fixed inset-y-0 left-0 w-64 z-50 shadow-2xl"
             >
               <div className="relative h-full">
-                {/* Close Button Inside Drawer */}
                 <button
                   onClick={() => setMobileSidebar(false)}
                   className="absolute top-4 right-4 flex items-center justify-center rounded-lg h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 z-50"

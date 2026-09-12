@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Invalid email address' }),
-  department: z.enum(['Engineering', 'Legal', 'HR', 'Marketing', 'Operations', 'Finance']),
+  department: z.string().min(2, { message: 'Department is required' }),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -30,8 +30,8 @@ export default function PersonalProfilePage() {
   const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || 'Sarah Connor',
-      email: user?.email || 'sarah.connor@sky-net.io',
+      name: user?.name || 'Enterprise User',
+      email: user?.email || 'user@enterprise.ai',
       department: user?.department || 'Engineering',
     }
   });
@@ -72,87 +72,76 @@ export default function PersonalProfilePage() {
             
             {/* Avatar Preview & URL */}
             <div className="flex flex-col sm:flex-row items-center gap-6 p-4 border border-border/80 rounded-2xl bg-muted/20">
-              <div className="h-20 w-20 overflow-hidden rounded-2xl border-2 border-primary bg-muted flex-shrink-0 shadow">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={user?.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-primary text-xl font-bold text-primary-foreground">
-                    {user?.name[0]}
-                  </div>
-                )}
+              <div className="h-20 w-20 overflow-hidden rounded-2xl border-2 border-primary bg-muted flex-shrink-0 shadow flex items-center justify-center font-bold text-xl text-teal-800">
+                {user?.name?.charAt(0) || 'U'}
               </div>
-              
-              <div className="space-y-2 flex-1 w-full">
-                <label className="font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <Camera className="h-3.5 w-3.5" /> Avatar Image URL
-                </label>
+              <div className="flex-1 w-full space-y-1.5">
+                <label className="font-bold flex items-center gap-1.5"><Camera className="h-3.5 w-3.5" /> Avatar Image URL</label>
                 <Input 
-                  type="text" 
+                  placeholder="https://images.unsplash.com/photo-..." 
                   value={avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
+                  className="bg-background"
                 />
+                <p className="text-[10px] text-muted-foreground">Accepts direct JPG, PNG, or Unsplash public image URLs.</p>
               </div>
             </div>
 
-            {/* Inputs */}
+            {/* Inputs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
               <div className="space-y-1.5">
-                <label className="font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" /> Full Name
-                </label>
-                <Input 
-                  type="text" 
-                  {...register('name')}
-                  className={errors.name ? "border-rose-500" : ""}
-                />
-                {errors.name && <p className="text-[10px] text-rose-500 font-semibold">{errors.name.message}</p>}
+                <label className="font-bold flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-primary" /> Full Name</label>
+                <Input {...register('name')} className="bg-background" />
+                {errors.name && <p className="text-destructive font-medium">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" /> Email Address
-                </label>
-                <Input 
-                  type="email" 
-                  {...register('email')}
-                  className={errors.email ? "border-rose-500" : ""}
-                />
-                {errors.email && <p className="text-[10px] text-rose-500 font-semibold">{errors.email.message}</p>}
+                <label className="font-bold flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-primary" /> Workspace Email</label>
+                <Input type="email" {...register('email')} className="bg-background" />
+                {errors.email && <p className="text-destructive font-medium">{errors.email.message}</p>}
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" /> Assigned Department
-              </label>
-              <select
-                {...register('department')}
-                className="flex h-10 w-full rounded-lg border border-input bg-background/50 backdrop-blur-sm px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus:border-primary/50 text-foreground"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Legal">Legal</option>
-                <option value="HR">HR</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Operations">Operations</option>
-                <option value="Finance">Finance</option>
-              </select>
+              <div className="space-y-1.5">
+                <label className="font-bold flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-primary" /> Department</label>
+                <select 
+                  {...register('department')}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Legal">Legal</option>
+                  <option value="HR">Human Resources</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Finance">Finance</option>
+                  <option value="IT">IT</option>
+                  <option value="Sales">Sales</option>
+                </select>
+                {errors.department && <p className="text-destructive font-medium">{errors.department.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold flex items-center gap-1.5 text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> Workspace Role</label>
+                <div className="flex h-10 w-full items-center rounded-xl border border-border bg-muted/40 px-3 font-semibold text-muted-foreground">
+                  {user?.role || 'Employee'}
+                </div>
+              </div>
+
             </div>
 
           </CardContent>
-
-          <CardFooter className="flex justify-between items-center mt-2">
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Authenticated as {user?.role}</span>
-            <button
+          <CardFooter className="flex justify-end border-t border-border/80 p-4">
+            <button 
               type="submit"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/95 shadow transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white px-5 text-xs font-bold shadow-md hover:scale-103 transition-all"
             >
-              <Save className="h-4 w-4" /> Save Profile
+              <Save className="h-4 w-4" /> Save Profile Details
             </button>
           </CardFooter>
         </Card>
 
       </form>
+
     </div>
   );
 }

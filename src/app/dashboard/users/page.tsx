@@ -19,8 +19,8 @@ import { User as UserType } from '@/types';
 const userSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Invalid email address' }),
-  role: z.enum(['Admin', 'Member', 'Viewer']),
-  department: z.enum(['Engineering', 'Legal', 'HR', 'Marketing', 'Operations', 'Finance']),
+  role: z.enum(['SuperAdmin', 'Admin', 'Employee', 'Member', 'Viewer']),
+  department: z.string().min(2, { message: 'Department is required' }),
   status: z.enum(['Active', 'Inactive', 'Invited']),
 });
 
@@ -43,7 +43,7 @@ export default function UsersManagementPage() {
     defaultValues: {
       name: '',
       email: '',
-      role: 'Member',
+      role: 'Employee',
       department: 'Engineering',
       status: 'Active',
     }
@@ -53,7 +53,7 @@ export default function UsersManagementPage() {
     setEditingUser(u);
     setValue('name', u.name);
     setValue('email', u.email);
-    setValue('role', u.role);
+    setValue('role', (u.role === 'SUPER_ADMIN' ? 'SuperAdmin' : (u.role === 'ADMIN' ? 'Admin' : (u.role === 'EMPLOYEE' ? 'Employee' : u.role))) as any);
     setValue('department', u.department);
     setValue('status', u.status);
     setIsModalOpen(true);
@@ -292,6 +292,7 @@ export default function UsersManagementPage() {
                     className="flex h-10 w-full rounded-lg border border-input bg-background/50 backdrop-blur-sm px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus:border-primary/50 text-foreground"
                   >
                     <option value="Admin">Admin</option>
+                    <option value="Employee">Employee</option>
                     <option value="Member">Member</option>
                     <option value="Viewer">Viewer</option>
                   </select>

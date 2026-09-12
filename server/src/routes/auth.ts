@@ -53,13 +53,14 @@ router.post(
 router.post(
   '/login',
   asyncHandler(async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    const { email, id, password, role, department } = req.body;
+    const identifier = id || email;
 
-    if (!email || !password) {
-      throw new AppError('Email and password are required.', 400);
+    if (!identifier || !password) {
+      throw new AppError('Email/ID and password are required.', 400);
     }
 
-    const { user, accessToken, refreshToken } = await authService.login(email, password);
+    const { user, accessToken, refreshToken } = await authService.login(identifier, password, role, department);
 
     // Audit log
     await auditService.log(

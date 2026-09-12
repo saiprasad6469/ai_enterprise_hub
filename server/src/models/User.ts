@@ -1,11 +1,14 @@
 import mongoose, { Schema, Document as MongoDoc } from 'mongoose';
 
 export interface IUser extends MongoDoc {
+  _id: mongoose.Types.ObjectId;
   name: string;
   email: string;
+  employeeId?: string;
+  designation?: string;
   passwordHash: string;
-  role: 'Admin' | 'Employee';
-  department: 'Engineering' | 'Legal' | 'HR' | 'Marketing' | 'Operations' | 'Finance';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'EMPLOYEE' | 'SuperAdmin' | 'Admin' | 'Employee';
+  department: string;
   status: 'Active' | 'Inactive' | 'Invited';
   avatar?: string;
   organization?: mongoose.Types.ObjectId;
@@ -18,11 +21,16 @@ const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    employeeId: { type: String, trim: true, index: true },
+    designation: { type: String, trim: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ['Admin', 'Employee'], default: 'Employee' },
+    role: { 
+      type: String, 
+      enum: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'SuperAdmin', 'Admin', 'Employee'], 
+      default: 'Employee' 
+    },
     department: {
       type: String,
-      enum: ['Engineering', 'Legal', 'HR', 'Marketing', 'Operations', 'Finance'],
       default: 'Engineering',
     },
     status: { type: String, enum: ['Active', 'Inactive', 'Invited'], default: 'Active' },
@@ -33,7 +41,6 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-userSchema.index({ email: 1 });
 userSchema.index({ organization: 1 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

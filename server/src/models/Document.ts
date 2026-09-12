@@ -8,8 +8,9 @@ export interface IDocument extends MongoDoc {
   path: string;
   uploadedBy: mongoose.Types.ObjectId;
   department?: string;
-  status: 'Processing' | 'Processed' | 'Failed';
+  status: 'Uploading' | 'Processing' | 'Indexing' | 'Indexed' | 'Failed' | 'Processed';
   progress?: number;
+  chunksCount?: number;
   organization?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -24,8 +25,13 @@ const documentSchema = new Schema<IDocument>(
     path: { type: String, required: true },
     uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     department: { type: String },
-    status: { type: String, enum: ['Processing', 'Processed', 'Failed'], default: 'Processing' },
+    status: { 
+      type: String, 
+      enum: ['Uploading', 'Processing', 'Indexing', 'Indexed', 'Failed', 'Processed'], 
+      default: 'Processing' 
+    },
     progress: { type: Number, default: 0 },
+    chunksCount: { type: Number, default: 0 },
     organization: { type: Schema.Types.ObjectId, ref: 'Organization' },
   },
   { timestamps: true }
