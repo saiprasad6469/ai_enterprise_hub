@@ -91,7 +91,7 @@ interface DataState {
   fetchInitialData: () => Promise<void>;
   fetchAuditLogs: () => Promise<void>;
   setActiveChatId: (id: string | null) => void;
-  createNewChat: (agentId?: string) => string;
+ createNewChat: (agentId?: string) => Promise<string>;
   sendMessage: (chatId: string, content: string) => Promise<void>;
   deleteChat: (id: string) => void;
 }
